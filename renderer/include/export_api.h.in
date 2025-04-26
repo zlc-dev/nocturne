@@ -1,0 +1,9 @@
+#ifdef _WIN32
+    #ifdef ${PROJECT_NAME}_LIB_EXPORTS
+        #define ${PROJECT_NAME}_LIB_API __declspec(dllexport)
+    #else
+        #define ${PROJECT_NAME}_LIB_API __declspec(dllimport)
+    #endif
+#else
+    #define ${PROJECT_NAME}_LIB_API __attribute__((visibility("default")))
+#endif

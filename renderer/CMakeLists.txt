@@ -10,7 +10,7 @@ if(DYNAMIC_LINK)
     add_library(renderer SHARED ${SOURCE} ${HEADER})
     set(WEBGPU_LINK_TYPE "SHARED")
     if(WIN32)
-        target_compile_definitions(renderer PRIVATE LIB_EXPORTS)
+        target_compile_definitions(renderer PRIVATE ${PROJECT_NAME}_LIB_EXPORTS)
     elseif(UNIX)
         target_compile_options(renderer PRIVATE -fvisibility=hidden)
     endif()
@@ -41,3 +41,16 @@ function(target_copy_renderer_binaries TARGET)
         $<TARGET_FILE_DIR:${TARGET}>
     )
 endfunction()
+
+file(GLOB_RECURSE IN_FILES "${PROJECT_SOURCE_DIR}/*.in")
+list(FILTER IN_FILES EXCLUDE REGEX "${PROJECT_SOURCE_DIR}/vendor/.*")
+foreach(IN_FILE ${IN_FILES})
+    get_filename_component(OUTPUT_FILE_NAME ${IN_FILE} NAME_WLE)
+    get_filename_component(OUTPUT_FILE_PATH ${IN_FILE} DIRECTORY)
+    set(OUTPUT_FILE ${OUTPUT_FILE_PATH}/${OUTPUT_FILE_NAME})
+    message(${OUTPUT_FILE})
+    configure_file(
+        ${IN_FILE}
+        ${OUTPUT_FILE}
+    )
+endforeach(IN_FILE)
