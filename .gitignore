@@ -1,0 +1,6 @@
+out/
+build/
+install/
+CMakeFiles/
+.clangd
+CMakeUserPresets.json

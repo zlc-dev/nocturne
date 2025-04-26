@@ -1,0 +1,6 @@
+[submodule "window/vendor/SDL"]
+	path = window/vendor/SDL
+	url = https://github.com/libsdl-org/SDL.git
+[submodule "renderer/vendor/webgpu"]
+	path = renderer/vendor/webgpu
+	url = https://github.com/eliemichel/WebGPU-distribution.git

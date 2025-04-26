@@ -1,0 +1,5 @@
+CompileFlags:
+    Add:
+        - "-Wall"
+    CompilationDatabase: 
+        ${CMAKE_BINARY_DIR}
