@@ -5,7 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <string>
+#include <string_view>
 
 template<typename T, typename E>
 class Result;
@@ -46,7 +46,7 @@ struct Err<void> {
 };
 
 template<typename T, typename E>
-class Result {
+class [[nodiscard]] Result {
 public:
     Result(Ok<T>&& ok): data(std::in_place_index_t<0>(), std::move(ok.val)) {}
     Result(Err<E>&& err): data(std::in_place_index_t<1>(), std::move(err.val)) {}
@@ -66,11 +66,11 @@ public:
         throw std::runtime_error("Called unwrap on an error result");
     }
 
-    T expect(const std::string& message) && {
+    T expect(std::string_view message) && {
         if (is_ok()) {
             return std::get<T>(std::move(data));
         }
-        throw std::runtime_error(message);
+        throw std::runtime_error(message.data());
     }
 
     E unwrap_err() && {
@@ -101,7 +101,10 @@ public:
     template<typename Func, typename U = std::invoke_result_t<Func, T>>
     Result<U, E> map(Func&& f) && {
         if (is_ok()) {
-            return Ok{ f(std::move(std::get<T>(data))) };
+            if constexpr (std::is_same_v<U, void>)
+                return (f(std::move(std::get<T>(data))), Ok{});
+            else
+                return Ok{ f(std::move(std::get<T>(data))) };
         }
         return Err{ std::move(std::get<E>(data)) };
     }
@@ -109,7 +112,10 @@ public:
     template<typename Func, typename F = std::invoke_result_t<Func, E>>
     Result<T, F> map_err(Func&& f) && {
         if (is_err()) {
-            return Err{ f(std::move(std::get<E>(data))) };
+            if constexpr (std::is_same_v<F, void>)
+                return (f(std::move(std::get<E>(data))), Err{ });
+            else
+                return Err{ f(std::move(std::get<E>(data))) };
         }
         return Ok{ std::move(std::get<T>(data)) };
     }
@@ -120,7 +126,7 @@ private:
 
 
 template<typename E>
-class Result<void, E> {
+class [[nodiscard]] Result<void, E> {
 public:
     Result(Ok<void>): error(std::nullopt) {}
     Result(Err<E>&& err): error(std::move(err.val)) {} 
@@ -135,11 +141,11 @@ public:
         throw std::runtime_error("Called unwrap on an error result");
     }
 
-    void expect(const std::string& message) && {
+    void expect(std::string_view message) && {
         if (is_ok()) {
             return;
         }
-        throw std::runtime_error(message);
+        throw std::runtime_error(message.data());
     }
 
     E unwrap_err() && {
@@ -149,7 +155,7 @@ public:
         throw std::runtime_error("Called unwrap_err on a success result");
     }
 
-    template<typename Func, ResultCons Ret = typename std::invoke_result_t<Func, void>>
+    template<typename Func, ResultCons Ret = typename std::invoke_result_t<Func>>
     requires std::is_same_v<typename ResultTrait<Ret>::err_t, E>
     auto and_then(Func&& f) && -> Result<typename ResultTrait<Ret>::val_t, E> {
         if (is_ok()) {
@@ -158,7 +164,7 @@ public:
         return Err{ std::move(error.value()) };
     }
 
-    template<typename Func, ResultCons Ret = typename std::invoke_result_t<Func, void>>
+    template<typename Func, ResultCons Ret = typename std::invoke_result_t<Func>>
     requires std::is_same_v<typename ResultTrait<Ret>::val_t, void>
     auto or_else(Func&& f) && -> Result<void, typename ResultTrait<Ret>::err_t> {
         if (is_err()) {
@@ -167,10 +173,13 @@ public:
         return Ok{};
     }
 
-    template<typename Func, typename U = std::invoke_result_t<Func, void>>
+    template<typename Func, typename U = std::invoke_result_t<Func>>
     Result<U, E> map(Func&& f) && {
         if (is_ok()) {
-            return Ok{ f() };
+            if constexpr (std::is_same_v<U, void>)
+                return (f(), Ok{});
+            else
+                return Ok{ f() };
         }
         return Err{ std::move(error.value()) };
     }
@@ -178,7 +187,10 @@ public:
     template<typename Func, typename F = std::invoke_result_t<Func, E>>
     Result<void, F> map_err(Func&& f) && {
         if (is_err()) {
-            return Err{ f(std::move(error.value())) };
+            if constexpr (std::is_same_v<F, void>)
+                return (f(std::move(error.value())), Err{ });
+            else
+                return Err{ f(std::move(error.value())) };
         }
         return Ok{};
     }
@@ -189,7 +201,7 @@ private:
 };
 
 template<typename T>
-class Result<T, void> {
+class [[nodiscard]] Result<T, void> {
 public:
     Result(Ok<T>&& ok): data(std::move(ok.val)) {}
     Result(Err<void>): data(std::nullopt) {} 
@@ -204,11 +216,11 @@ public:
         throw std::runtime_error("Called unwrap on an error result");
     }
 
-    T expect(const std::string& message) && {
+    T expect(std::string_view message) && {
         if (is_ok()) {
             return std::move(data.value());
         }
-        throw std::runtime_error(message);
+        throw std::runtime_error(message.data());
     }
 
     void unwrap_err() && {
@@ -239,15 +251,21 @@ public:
     template<typename Func, typename U = std::invoke_result_t<Func, T>>
     Result<U, void> map(Func&& f) && {
         if (is_ok()) {
-            return Ok{ f(std::move(data.value())) };
+            if constexpr (std::is_same_v<U, void>)
+                return (f(std::move(data.value())), Ok{});
+            else
+                return Ok{ f(std::move(data.value())) };
         }
         return Err{};
     }
 
-    template<typename Func, typename F = std::invoke_result_t<Func, void>>
+    template<typename Func, typename F = std::invoke_result_t<Func>>
     Result<T, F> map_err(Func&& f) && {
         if (is_err()) {
-            return Err{ f() };
+            if constexpr (std::is_same_v<F, void>)
+                return (f(), Err{ });
+            else
+                return Err{ f() };
         }
         return Ok{std::move(data.value())};
     }
@@ -258,7 +276,7 @@ private:
 };
 
 template<>
-class Result<void, void> {
+class [[nodiscard]] Result<void, void> {
 public:
     Result(Ok<void>): err(false) {}
     Result(Err<void>): err(true) {} 
@@ -273,11 +291,11 @@ public:
         throw std::runtime_error("Called unwrap on an error result");
     }
 
-    void expect(const std::string& message) && {
+    void expect(std::string_view message) && {
         if (is_ok()) {
             return;
         }
-        throw std::runtime_error(message);
+        throw std::runtime_error(message.data());
     }
 
     void unwrap_err() && {
@@ -287,7 +305,7 @@ public:
         throw std::runtime_error("Called unwrap_err on a success result");
     }
 
-    template<typename Func, ResultCons Ret = typename std::invoke_result_t<Func, void>>
+    template<typename Func, ResultCons Ret = typename std::invoke_result_t<Func>>
     requires std::is_same_v<typename ResultTrait<Ret>::err_t, void>
     auto and_then(Func&& f) && -> Result<typename ResultTrait<Ret>::val_t, void> {
         if (is_ok()) {
@@ -296,7 +314,7 @@ public:
         return Err{};
     }
 
-    template<typename Func, ResultCons Ret = typename std::invoke_result_t<Func, void>>
+    template<typename Func, ResultCons Ret = typename std::invoke_result_t<Func>>
     requires std::is_same_v<typename ResultTrait<Ret>::val_t, void>
     auto or_else(Func&& f) && -> Result<void, typename ResultTrait<Ret>::err_t> {
         if (is_err()) {
@@ -305,18 +323,24 @@ public:
         return Ok{};
     }
 
-    template<typename Func, typename U = std::invoke_result_t<Func, void>>
+    template<typename Func, typename U = std::invoke_result_t<Func>>
     Result<U, void> map(Func&& f) && {
         if (is_ok()) {
-            return Ok{ f() };
+            if constexpr (std::is_same_v<U, void>)
+                return (f(), Ok{});
+            else
+                return Ok{ f() };
         }
         return Err{};
     }
 
-    template<typename Func, typename F = std::invoke_result_t<Func, void>>
+    template<typename Func, typename F = std::invoke_result_t<Func>>
     Result<void, F> map_err(Func&& f) && {
         if (is_err()) {
-            return Err{ f() };
+            if constexpr (std::is_same_v<F, void>)
+                return (f(), Err{ });
+            else
+                return Err{ f() };
         }
         return Ok{};
     }
