@@ -9,8 +9,8 @@ using namespace std::string_literals;
 using namespace std::chrono_literals;
 
 int main(int argc, char* const argv[]) {
-    auto window_sys = WindowSystemFactory::crate(WindowType::SDL3)
-        .expect("cannot crate window system");
+    auto window_sys = WindowSystemFactory::create(WindowType::SDL3)
+        .expect("cannot create window system");
     (void)window_sys->init();
     std::cout << "init\n";
     WindowConfig config {
@@ -20,14 +20,14 @@ int main(int argc, char* const argv[]) {
         .flags = WindowFlags::RESIZEABLE
     };
     {
-        auto window = window_sys->crate(config).expect("cannot crate window");
+        auto window = window_sys->create(config).expect("cannot create window");
         std::this_thread::sleep_for(1s);
     }
 
-    Result<int, bool> res = Ok{10};
+    Result<int, void> res = Ok{10};
     (void)std::move(res).map([](int x) { std::cout << x << '\n'; })
                         .map([](void) {std::cout << "void\n"; });
 
-    window_sys->deinit();
+    window_sys->dispose();
     return 0;
 }

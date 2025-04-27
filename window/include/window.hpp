@@ -13,6 +13,7 @@ END_BIT_TAGS
 
 enum class WindowType {
     SDL3,
+    GLFW,
 };
 
 struct WindowConfig {
@@ -30,14 +31,14 @@ class WindowSystem {
 public:
     virtual Result<void, void> init() = 0;
 
-    virtual Result<std::unique_ptr<Window>, void> crate(WindowConfig config) = 0;
+    virtual Result<std::unique_ptr<Window>, void> create(WindowConfig config) = 0;
 
-    virtual void deinit() = 0;
+    virtual void dispose() = 0;
 
     virtual ~WindowSystem() = default;
 };
 
 class WINDOW_LIB_API WindowSystemFactory {
 public:
-    static Result<std::unique_ptr<WindowSystem>, void> crate(WindowType type);
+    static Result<std::unique_ptr<WindowSystem>, void> create(WindowType type);
 };

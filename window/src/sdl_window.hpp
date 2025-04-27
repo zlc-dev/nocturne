@@ -24,9 +24,9 @@ class SDLWindow: public Window {
 public:
 
     SDLWindow(SDL_Window* window) : m_window(window) {}
-    SDLWindow(WindowConfig config) : m_window(SDLWindow::crate(config).unwrap()) {}
+    SDLWindow(WindowConfig config) : m_window(SDLWindow::create(config).unwrap()) {}
 
-    inline static Result<SDL_Window*, void> crate(WindowConfig config) {
+    inline static Result<SDL_Window*, void> create(WindowConfig config) {
         auto window = SDL_CreateWindow(
             config.title.data(), 
             config.w, 
@@ -57,17 +57,15 @@ public:
         }
     }
 
-    Result<std::unique_ptr<Window>, void> crate(WindowConfig config) override {
-        return SDLWindow::crate(config).map([](SDL_Window* window) {
+    Result<std::unique_ptr<Window>, void> create(WindowConfig config) override {
+        return SDLWindow::create(config).map([](SDL_Window* window) {
             std::unique_ptr<Window> ret = std::make_unique<SDLWindow>(window);
             return ret; 
         });
     }
 
-    void deinit() override {
-        SDL_Log("SDL deinit\n");
+    void dispose() override {
+        SDL_Log("SDL dispose\n");
         SDL_Quit();
     }
 };
-
-
