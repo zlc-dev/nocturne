@@ -1,6 +1,13 @@
 #include "window.hpp"
+#include "result.hpp"
+#include "sdl_window.hpp"
+#include <memory>
 
-int WindowSystem::init(void) {
-    // todo
-    return 0;
+Result<std::unique_ptr<WindowSystem>, void> WindowSystemFactory::crate(WindowType type) {
+    switch (type) {
+        case WindowType::SDL3:
+            std::unique_ptr<WindowSystem> ret = std::make_unique<SDLWindowSystem>();
+            return Ok{std::move(ret)};
+        break;
+    }
 }

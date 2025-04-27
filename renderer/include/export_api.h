@@ -1,9 +1,13 @@
-#ifdef _WIN32
-    #ifdef RENDERER_LIB_EXPORTS
-        #define RENDERER_LIB_API __declspec(dllexport)
+#if RENDERER_LINK_SHARED
+    #ifdef _WIN32
+        #ifdef RENDERER_LIB_EXPORTS
+            #define RENDERER_LIB_API __declspec(dllexport)
+        #else
+            #define RENDERER_LIB_API __declspec(dllimport)
+        #endif
     #else
-        #define RENDERER_LIB_API __declspec(dllimport)
+        #define RENDERER_LIB_API __attribute__((visibility("default")))
     #endif
 #else
-    #define RENDERER_LIB_API __attribute__((visibility("default")))
+    #define RENDERER_LIB_API
 #endif

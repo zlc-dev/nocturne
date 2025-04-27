@@ -3,13 +3,12 @@ cmake_minimum_required(VERSION 3.25.0)
 project(NOCTURNE CXX)
 
 file(GLOB_RECURSE SOURCE "${PROJECT_SOURCE_DIR}/src/*.cpp" "${PROJECT_SOURCE_DIR}/src/*.cc")
-file(GLOB_RECURSE HADERS "${PROJECT_SOURCE_DIR}/src/*.hpp" "${PROJECT_SOURCE_DIR}/src/*.h")
 
 add_executable(nocturne ${SOURCE} ${HADERS})
 
-set(DYNAMIC_LINK ON)
-set(WEBGPU_BUILD_FROM_SOURCE ON)
-set(WEBGPU_BACKEND "DAWN")
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED 20)
+set(CMAKE_BUILD_TYPE Debug)
 
 set_target_properties(nocturne PROPERTIES
     CXX_STANDARD 20
@@ -18,10 +17,19 @@ set_target_properties(nocturne PROPERTIES
     COMPILE_WARNING_AS_ERROR ON
 )
 
+set(ENV{https_proxy} "http://127.0.0.1:7890")
+set(ENV{http_proxy} "http://127.0.0.1:7890")
+
+set(WEBGPU_BACKEND "DAWN")
+set(WINDOW_LINK_SHARED OFF)
+set(RENDERER_LINK_SHARED OFF)
+
+target_compile_options(nocturne PRIVATE -fexceptions)
+
 add_subdirectory("${PROJECT_SOURCE_DIR}/window/")
 add_subdirectory("${PROJECT_SOURCE_DIR}/renderer/")
 
-target_link_libraries(nocturne PRIVATE window renderer)
+target_link_libraries(nocturne PRIVATE renderer window)
 
 # copy binaries
 target_copy_renderer_binaries(nocturne)
@@ -29,8 +37,16 @@ target_copy_window_binaries(nocturne)
 
 target_include_directories(nocturne PRIVATE "${PROJECT_SOURCE_DIR}/include/" "${PROJECT_SOURCE_DIR}/vendor/")
 
-set(CLANGD_CONFIG_FILE "${CMAKE_SOURCE_DIR}/.clangd")
-configure_file(
-    "${CMAKE_SOURCE_DIR}/.clangd.in"
-    "${CLANGD_CONFIG_FILE}"
-)
+
+list(APPEND IN_FILES "${CMAKE_SOURCE_DIR}/.clangd.in" "${CMAKE_SOURCE_DIR}/.vscode/launch.json.in")
+
+foreach(IN_FILE ${IN_FILES})
+    get_filename_component(OUTPUT_FILE_NAME ${IN_FILE} NAME_WLE)
+    get_filename_component(OUTPUT_FILE_PATH ${IN_FILE} DIRECTORY)
+    set(OUTPUT_FILE ${OUTPUT_FILE_PATH}/${OUTPUT_FILE_NAME})
+    message(${OUTPUT_FILE})
+    configure_file(
+        ${IN_FILE}
+        ${OUTPUT_FILE}
+    )
+endforeach(IN_FILE)

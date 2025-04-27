@@ -2,13 +2,22 @@ cmake_minimum_required(VERSION 3.25.0)
 
 project(RENDERER CXX)
 
-file(GLOB_RECURSE SOURCE "${PROJECT_SOURCE_DIR}/src/*.cpp" "${PROJECT_SOURCE_DIR}/src/*.cc")
-file(GLOB_RECURSE HEADER "${PROJECT_SOURCE_DIR}/src/*.hpp" "${PROJECT_SOURCE_DIR}/src/*.h")
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED 20)
 
-if(DYNAMIC_LINK)
+file(GLOB_RECURSE SOURCE 
+    "${PROJECT_SOURCE_DIR}/src/*.cpp" 
+    "${PROJECT_SOURCE_DIR}/src/*.cc"
+    "${PROJECT_SOURCE_DIR}/src/*.hpp"
+    "${PROJECT_SOURCE_DIR}/src/*.h"
+)
+
+file(GLOB_RECURSE HEADER "${PROJECT_SOURCE_DIR}/include/*.h")
+
+if(${RENDERER_LINK_SHARED})
     message("-- ${PROJECT_NAME}: making shared lib")
     add_library(renderer SHARED ${SOURCE} ${HEADER})
-    set(WEBGPU_LINK_TYPE "SHARED")
+    target_compile_definitions(renderer PRIVATE ${PROJECT_NAME}_LINK_SHARED)
     if(WIN32)
         target_compile_definitions(renderer PRIVATE ${PROJECT_NAME}_LIB_EXPORTS)
     elseif(UNIX)
@@ -17,7 +26,6 @@ if(DYNAMIC_LINK)
 else()
     message("-- ${PROJECT_NAME}: making static lib")
     add_library(renderer STATIC ${SOURCE} ${HEADER})
-    set(WEBGPU_LINK_TYPE "STATIC")
 endif()
 
 set_target_properties(renderer PROPERTIES
@@ -27,7 +35,7 @@ set_target_properties(renderer PROPERTIES
     COMPILE_WARNING_AS_ERROR ON
 )
 
-add_subdirectory("${PROJECT_SOURCE_DIR}/vendor/webgpu")
+add_subdirectory(vendor/webgpu)
 
 target_link_libraries(renderer PUBLIC webgpu)
 target_include_directories(renderer PUBLIC "${PROJECT_SOURCE_DIR}/include")
@@ -35,11 +43,13 @@ target_copy_webgpu_binaries(renderer)
 
 function(target_copy_renderer_binaries TARGET)
     target_copy_webgpu_binaries(${TARGET})
-    add_custom_command(TARGET ${TARGET} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:renderer>
-        $<TARGET_FILE_DIR:${TARGET}>
-    )
+    if(${RENDERER_LINK_SHARED})
+        add_custom_command(TARGET ${TARGET} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:renderer>
+            $<TARGET_FILE_DIR:${TARGET}>
+        )
+    endif()
 endfunction()
 
 file(GLOB_RECURSE IN_FILES "${PROJECT_SOURCE_DIR}/*.in")
