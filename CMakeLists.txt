@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.25.0)
 
+set(ENV{https_proxy} "http://127.0.0.1:7890")
+set(ENV{http_proxy} "http://127.0.0.1:7890")
+
 project(NOCTURNE CXX)
+
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
 
 file(GLOB_RECURSE SOURCE "${PROJECT_SOURCE_DIR}/src/*.cpp" "${PROJECT_SOURCE_DIR}/src/*.cc")
 
@@ -17,9 +22,6 @@ set_target_properties(nocturne PROPERTIES
     COMPILE_WARNING_AS_ERROR ON
 )
 
-set(ENV{https_proxy} "http://127.0.0.1:7890")
-set(ENV{http_proxy} "http://127.0.0.1:7890")
-
 set(WEBGPU_BACKEND "DAWN")
 set(WINDOW_LINK_SHARED OFF)
 set(RENDERER_LINK_SHARED OFF)
@@ -29,7 +31,7 @@ target_compile_options(nocturne PRIVATE -fexceptions)
 add_subdirectory("${PROJECT_SOURCE_DIR}/window/")
 add_subdirectory("${PROJECT_SOURCE_DIR}/renderer/")
 
-target_link_libraries(nocturne PRIVATE renderer window)
+target_link_libraries(nocturne PRIVATE webgpu renderer window)
 
 # copy binaries
 target_copy_renderer_binaries(nocturne)

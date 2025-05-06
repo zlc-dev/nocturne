@@ -3,8 +3,8 @@
 #include <SDL3/SDL.h>
 #include <memory>
 #include <string_view>
+#include "SDL3/SDL_events.h"
 #include "SDL3/SDL_init.h"
-#include "SDL3/SDL_log.h"
 #include "SDL3/SDL_video.h"
 #include "result.hpp"
 #include "window.hpp"
@@ -26,7 +26,40 @@ public:
     SDLWindow(SDL_Window* window) : m_window(window) {}
     SDLWindow(WindowConfig config) : m_window(SDLWindow::create(config).unwrap()) {}
 
+#ifdef _WIN32
+    HWND getHWND() override {
+        SDL_PropertiesID props = SDL_GetWindowProperties(m_window);
+        return (HWND)SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
+    }
+#endif
+
+    WindowEvent pollEvent() override {
+        SDL_Event event;
+        if (SDL_PollEvent(&event)) {
+            switch(event.type) {
+                case SDL_EVENT_QUIT: {
+                    return WindowEvent {
+                        .type = WindowEventType::Close,
+                        .close_info = WindowEvent::Close{}
+                    };
+                }
+                default: {
+                    return WindowEvent {
+                        .type = WindowEventType::None,
+                        .none_info = WindowEvent::None{}
+                    };
+                }
+            } 
+        } else {
+            return WindowEvent {
+                .type = WindowEventType::None,
+                .none_info = WindowEvent::None{}
+            };
+        }
+    }
+
     inline static Result<SDL_Window*, void> create(WindowConfig config) {
+        
         auto window = SDL_CreateWindow(
             config.title.data(), 
             config.w, 
@@ -34,7 +67,7 @@ public:
             to_sdl_window_flags(config.flags)
         );
         if(!window) return Err{};
-        return Ok {window};
+        return Ok { std::move(window) };
     }
 
     ~SDLWindow() {
@@ -48,10 +81,10 @@ class SDLWindowSystem: public WindowSystem {
 public:
     SDLWindowSystem() = default;
 
-    Result<void, void> init() override {
-        SDL_Log("SDL init\n");
+    static Result<std::unique_ptr<WindowSystem>, void> init() {
         if (SDL_Init(SDL_INIT_VIDEO)) {
-            return Ok{};
+            std::unique_ptr<WindowSystem> ret = std::make_unique<SDLWindowSystem>();
+            return Ok{ std::move(ret) };
         } else {
             return Err{};
         }
@@ -64,8 +97,8 @@ public:
         });
     }
 
-    void dispose() override {
-        SDL_Log("SDL dispose\n");
+    ~SDLWindowSystem() override {
         SDL_Quit();
     }
 };
+

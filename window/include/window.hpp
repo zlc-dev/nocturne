@@ -5,11 +5,16 @@
 #include <string_view>
 #include <bitflags.hpp>
 #include "export_api.h"
+#include <optional.hpp>
+
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 
 BEGIN_BIT_TAGS(WindowFlags, unsigned int)
-    DEF_BIT_TAG(RESIZEABLE, 0)
-    DEF_BIT_TAG(FULLSCREEN, 1)
-END_BIT_TAGS
+    DEF_TAG(RESIZEABLE, 1 << 0);
+    DEF_TAG(FULLSCREEN, 1 << 1);
+END_BIT_TAGS;
 
 enum class WindowType {
     SDL3,
@@ -22,18 +27,43 @@ struct WindowConfig {
     WindowFlags flags;
 };
 
+enum class WindowEventType {
+    None, Close,
+};
+
+struct WindowEvent {
+    struct None {};
+    struct Close {};
+    
+    struct Resize {
+        int w, h;
+    };
+
+    WindowEventType type;
+
+    union {
+        None none_info;
+        Close close_info;
+        Resize resize_info;
+    };
+};
+
 class Window {
+private:
+
 public:
+#ifdef _WIN32
+    virtual HWND getHWND() = 0;
+#endif
+    virtual WindowEvent pollEvent() = 0;
+
     virtual ~Window() = default;
 };
 
+
 class WindowSystem {
 public:
-    virtual Result<void, void> init() = 0;
-
     virtual Result<std::unique_ptr<Window>, void> create(WindowConfig config) = 0;
-
-    virtual void dispose() = 0;
 
     virtual ~WindowSystem() = default;
 };

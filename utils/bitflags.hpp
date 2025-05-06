@@ -69,6 +69,9 @@ public:\
     inline static NAME empty() { return {}; }
 
 #define DEF_BIT_TAG(NAME, BIT) public: \
-    inline static constexpr Base NAME = Base::crate(BitsType {1 << BIT});\
+    inline static constexpr Base NAME = Base::crate(BitsType {1 << (BIT)})\
 
-#define END_BIT_TAGS };
+#define DEF_TAG(NAME, TAG) public: \
+    inline static constexpr Base NAME = Base::crate(BitsType { (TAG) })\
+
+#define END_BIT_TAGS }
