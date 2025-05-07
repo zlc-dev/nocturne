@@ -58,13 +58,13 @@ public:
     }
 };
 
-#define BEGIN_BIT_TAGS(NAME, TYPE) class NAME: public BitFlagsBase<NAME, TYPE> {\
+#define BEGIN_BIT_TAGS(NAME, TYPE, EMPTY) class NAME: public BitFlagsBase<NAME, TYPE> {\
 private:\
     friend struct BitFlagsBase<NAME, TYPE>;\
     using Base = BitFlagsBase<NAME, TYPE>;\
     using BitsType = TYPE;\
-    inline NAME() : BitFlagsBase<NAME, TYPE>{0} {}\
 public:\
+    inline NAME() : BitFlagsBase<NAME, TYPE>{(EMPTY)} {}\
     inline NAME(BitFlagsBase<NAME, TYPE> t) : BitFlagsBase<NAME, TYPE>{t} {}\
     inline static NAME empty() { return {}; }
 

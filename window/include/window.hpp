@@ -11,7 +11,7 @@
 #include <Windows.h>
 #endif
 
-BEGIN_BIT_TAGS(WindowFlags, unsigned int)
+BEGIN_BIT_TAGS(WindowFlags, unsigned int, 0)
     DEF_TAG(RESIZEABLE, 1 << 0);
     DEF_TAG(FULLSCREEN, 1 << 1);
 END_BIT_TAGS;
@@ -53,9 +53,11 @@ private:
 
 public:
 #ifdef _WIN32
-    virtual HWND getHWND() = 0;
+    virtual HWND getHWND() const = 0;
 #endif
     virtual WindowEvent pollEvent() = 0;
+
+    virtual const WindowConfig& getConfig() const = 0;
 
     virtual ~Window() = default;
 };

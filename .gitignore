@@ -5,3 +5,5 @@ CMakeFiles/
 .clangd
 CMakeUserPresets.json
 .vscode/
+*.o
+*.lib

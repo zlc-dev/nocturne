@@ -115,3 +115,82 @@ private:
     std::optional<T> data;
 };
 
+template <>
+struct Optional<void> {
+    Optional(Some<void>&& some): has_value( true ) {}
+    Optional(None&& none): has_value( false ) {}
+    Optional(): Optional( None{} ) {}
+
+    bool is_ok() const { return has_value; }
+    bool is_err() const { return has_value; }
+
+    void unwrap() && {
+        if (is_ok()) {
+            return;
+        }
+        throw std::runtime_error("Called unwrap on an error result");
+    }
+
+    void expect(std::string_view message) && {
+        if (is_ok()) {
+            return;
+        }
+        throw std::runtime_error(message.data());
+    }
+
+    void unwrap_err() && {
+        if (is_err()) {
+            return;
+        }
+        throw std::runtime_error("Called unwrap_err on a success result");
+    }
+
+    template<typename Func, OptionalCons Ret = typename std::invoke_result_t<Func>>
+    auto and_then(Func&& f) && -> Optional<typename OptionalTrait<Ret>::val_t> {
+        if (is_ok()) {
+            return f();
+        }
+        return None{};
+    }
+
+    template<typename Func, OptionalCons Ret = typename std::invoke_result_t<Func>>
+    requires std::is_same_v<typename OptionalTrait<Ret>::val_t, void>
+    auto or_else(Func&& f) && -> Optional<void> {
+        if (is_err()) {
+            return f();
+        }
+        return Some{};
+    }
+
+    template<typename Func, typename U = std::invoke_result_t<Func>>
+    Optional<U> map(Func&& f) && {
+        if (is_ok()) {
+            if constexpr (std::is_same_v<U, void>)
+                return (f(), Some{});
+            else
+                return Some { f() };
+        }
+        return None{};
+    }
+
+
+    template<typename E>
+    auto ok_or(E&& err) && -> Result<void, E> {
+        if(is_ok()) {
+            return Ok {};
+        } else {
+            return Err { std::move(err) };
+        }
+    }
+
+    auto ok_or() && -> Result<void, void> {
+        if(is_ok()) {
+            return Ok {};
+        } else {
+            return Err{};
+        }
+    }
+
+private:
+    bool has_value { false };
+};

@@ -9,7 +9,17 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
 
 file(GLOB_RECURSE SOURCE "${PROJECT_SOURCE_DIR}/src/*.cpp" "${PROJECT_SOURCE_DIR}/src/*.cc")
 
-add_executable(nocturne ${SOURCE} ${HADERS})
+include(cmake/utils.cmake)
+
+list(APPEND BIN_FILES "${CMAKE_SOURCE_DIR}/assets/wgsl/test.wgsl")
+
+foreach(BIN_FILE ${BIN_FILES})
+    file(RELATIVE_PATH REL_PATH ${CMAKE_SOURCE_DIR} ${BIN_FILE})
+    embed_binary_as_symbol(INPUT_FILE ${BIN_FILE} OUTPUT_OBJECT OBJ_OUTPUT SYMBOL_PREFIX "_binary_${REL_PATH}")
+    list(APPEND BIN_OBJS ${OBJ_OUTPUT})
+endforeach()
+
+add_executable(nocturne ${BIN_OBJS} ${SOURCE} ${HADERS})
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED 20)
@@ -31,7 +41,7 @@ target_compile_options(nocturne PRIVATE -fexceptions)
 add_subdirectory("${PROJECT_SOURCE_DIR}/window/")
 add_subdirectory("${PROJECT_SOURCE_DIR}/renderer/")
 
-target_link_libraries(nocturne PRIVATE webgpu renderer window)
+target_link_libraries(nocturne PRIVATE ${BIN_OBJS} webgpu renderer window)
 
 # copy binaries
 target_copy_renderer_binaries(nocturne)
