@@ -2,24 +2,6 @@
 #include <iostream>
 #include <webgpu/webgpu.hpp>
 
-
-wgpu::Surface crateSurfacefromHWND(wgpu::Instance instance, HWND hwnd) {
-
-    HINSTANCE hinstance = GetModuleHandle(NULL);
-
-    wgpu::SurfaceDescriptorFromWindowsHWND from_windows_hwnd;
-    from_windows_hwnd.chain.sType = WGPUSType_SurfaceDescriptorFromWindowsHWND;
-    from_windows_hwnd.chain.next = NULL;
-    from_windows_hwnd.hinstance = hinstance;
-    from_windows_hwnd.hwnd = hwnd;
-
-    wgpu::SurfaceDescriptor surface_descriptor;
-    surface_descriptor.nextInChain = &from_windows_hwnd.chain;
-    surface_descriptor.label = nullptr;
-
-    return instance.createSurface(surface_descriptor);
-}
-
 void inspectAdapter(wgpu::Adapter adapter) {
     wgpu::SupportedLimits supported_limits = {};
     supported_limits.nextInChain = nullptr;

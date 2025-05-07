@@ -1,10 +1,12 @@
 #pragma once
 
 #include <SDL3/SDL.h>
+#include <cstdint>
 #include <memory>
 #include <string_view>
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_init.h"
+#include "SDL3/SDL_properties.h"
 #include "SDL3/SDL_video.h"
 #include "result.hpp"
 #include "window.hpp"
@@ -36,10 +38,44 @@ public:
     }
     SDLWindow(WindowConfig config) : m_config(config), m_window(SDLWindow::create(config).unwrap()) {}
 
-#ifdef _WIN32
-    HWND getHWND() const override {
+#if defined (SDL_PLATFORM_WIN32)
+    WindowDisplay getDisplay() const override {
         SDL_PropertiesID props = SDL_GetWindowProperties(m_window);
-        return (HWND)SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
+        void *hwnd = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
+        return WindowDisplay {
+            .type = WindowDisplay::Type::HWND,
+            .hwnd = WindowDisplay::HWND {
+                .hwnd = hwnd,
+                .hinstance = GetModuleHandle(NULL)
+            }
+        };
+    }
+#elif defined (SDL_PLATFORM_LINUX)
+    WindowDisplay getDisplay() const override {
+        SDL_PropertiesID props = SDL_GetWindowProperties(m_window);
+        if (SDL_strcmp(SDL_GetCurrentVideoDriver(), "x11") == 0) {
+            void *x11_display = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
+            uint64_t x11_window = (uint64_t)SDL_GetNumberProperty(props, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0);
+            return WindowDisplay {
+                .type = WindowDisplay::Type::X11,
+                .x11 = WindowDisplay::X11 {
+                    .display = x11_display,
+                    .window = x11_window
+                }
+            };
+        } else if (SDL_strcmp(SDL_GetCurrentVideoDriver(), "wayland") == 0) {
+            void *wayland_display = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, NULL);
+            void *wayland_surface = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, NULL);
+            return WindowDisplay {
+                .type = WindowDisplay::Type::Wayland,
+                .wayland = WindowDisplay::Wayland {
+                    .display = wayland_display,
+                    .surface = wayland_surface
+                }
+            };
+        } else {
+            abort();
+        }
     }
 #endif
 

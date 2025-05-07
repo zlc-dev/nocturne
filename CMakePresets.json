@@ -10,7 +10,7 @@
             "hidden": true,
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "installDir": "${sourceDir}/out/install/${presetName}",
-            "generator": "Makefiles",
+            "generator": "Unix Makefiles",
             "condition": {
                 "type": "equals",
                 "lhs": "${hostSystemName}",

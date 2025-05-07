@@ -1,11 +1,13 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <result.hpp>
 #include <string_view>
 #include <bitflags.hpp>
 #include "export_api.h"
 #include <optional.hpp>
+#include <SDL3/SDL_platform_defines.h>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -48,13 +50,42 @@ struct WindowEvent {
     };
 };
 
+struct WindowDisplay {
+    enum class Type {
+        HWND,
+        X11,
+        Wayland
+    };
+
+    struct HWND {
+        void* hwnd;
+        void* hinstance;
+    };
+
+    struct X11 {
+        void* display;
+        uint64_t window;
+    };
+
+    struct Wayland {
+        void* display;
+        void* surface;
+    };
+
+    Type type;
+    union {
+        HWND hwnd;
+        X11 x11;
+        Wayland wayland;
+    };
+};
+
 class Window {
 private:
 
 public:
-#ifdef _WIN32
-    virtual HWND getHWND() const = 0;
-#endif
+    virtual WindowDisplay getDisplay() const = 0;
+
     virtual WindowEvent pollEvent() = 0;
 
     virtual const WindowConfig& getConfig() const = 0;

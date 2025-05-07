@@ -3,9 +3,54 @@
 #include "renderer.h"
 #include "webgpu/webgpu.hpp"
 #include "window.hpp"
+#include <cstdlib>
 #include <memory>
 
 extern "C" const char _binary_assets_wgsl_test_wgsl_start[];
+
+inline static wgpu::Surface crateSurfacefromWindow(wgpu::Instance instance, const Window& window) {
+#if defined (SDL_PLATFORM_WIN32)
+    auto display = window.getDisplay();
+
+    wgpu::SurfaceDescriptorFromWindowsHWND from_windows_display;
+    from_windows_display.chain.sType = WGPUSType_SurfaceDescriptorFromWindowsHWND;
+    from_windows_display.chain.next = NULL;
+    from_windows_display.hinstance = display.hwnd.hinstance;
+    from_windows_display.hwnd = display.hwnd.hwnd;
+    wgpu::SurfaceDescriptor surface_descriptor;
+    surface_descriptor.nextInChain = &from_windows_display.chain;
+    surface_descriptor.label = nullptr;
+    return instance.createSurface(surface_descriptor);
+
+#elif defined (SDL_PLATFORM_LINUX)
+    auto display = window.getDisplay();
+    if(display.type == WindowDisplay::Type::X11) {
+        wgpu::SurfaceDescriptorFromXlibWindow from_windows_display;
+        from_windows_display.chain.sType = wgpu::SType::SurfaceDescriptorFromXlibWindow;
+        from_windows_display.chain.next = NULL;
+        from_windows_display.display = display.x11.display;
+        from_windows_display.window = display.x11.window;
+
+        wgpu::SurfaceDescriptor surface_descriptor;
+        surface_descriptor.nextInChain = &from_windows_display.chain;
+        surface_descriptor.label = nullptr;
+        return instance.createSurface(surface_descriptor);
+    } else if (display.type == WindowDisplay::Type::Wayland) {
+        wgpu::SurfaceDescriptorFromWaylandSurface from_windows_display;
+        from_windows_display.chain.sType = wgpu::SType::SurfaceDescriptorFromWaylandSurface;
+        from_windows_display.chain.next = NULL;
+        from_windows_display.display = display.wayland.display;
+        from_windows_display.surface = display.wayland.surface;
+
+        wgpu::SurfaceDescriptor surface_descriptor;
+        surface_descriptor.nextInChain = &from_windows_display.chain;
+        surface_descriptor.label = nullptr;
+        return instance.createSurface(surface_descriptor);
+    } else {
+        abort();
+    }
+#endif
+}
 
 class Application {
 public:
@@ -16,10 +61,7 @@ public:
         wgpu::InstanceDescriptor inst_desc = {};
         inst_desc.nextInChain = nullptr;
         m_instance = wgpu::createInstance(inst_desc);
-#ifdef _WIN32
-        m_surface = crateSurfacefromHWND(m_instance, m_window->getHWND());
-#endif
-
+        m_surface = crateSurfacefromWindow(m_instance, *m_window);
         wgpu::RequestAdapterOptions adapter_opts = {};
         wgpu::Adapter adapter = m_instance.requestAdapter(adapter_opts);
         inspectAdapter(adapter);

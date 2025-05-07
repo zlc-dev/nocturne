@@ -41,7 +41,7 @@ target_compile_options(nocturne PRIVATE -fexceptions)
 add_subdirectory("${PROJECT_SOURCE_DIR}/window/")
 add_subdirectory("${PROJECT_SOURCE_DIR}/renderer/")
 
-target_link_libraries(nocturne PRIVATE ${BIN_OBJS} webgpu renderer window)
+target_link_libraries(nocturne PRIVATE webgpu renderer window)
 
 # copy binaries
 target_copy_renderer_binaries(nocturne)

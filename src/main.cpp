@@ -1,7 +1,6 @@
 #include "application.hpp"
 #include "result.hpp"
 #include "window.hpp"
-#include <windef.h>
 
 using namespace std::string_literals;
 
