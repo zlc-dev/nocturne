@@ -1,55 +1,97 @@
+/*
+    application.hpp
+    Copyright (C) 2025 zlc-dev
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+*/
+
 #pragma once
 
 #include "renderer.h"
 #include "webgpu/webgpu.hpp"
 #include "window.hpp"
+#include <array>
 #include <cstdlib>
 #include <memory>
+#include <stdlib.h>
 
 extern "C" const char _binary_assets_wgsl_test_wgsl_start[];
 
+static const std::array<float, 12> vertex_data = {
+    -0.5, -0.5,
+    +0.5, -0.5,
+    +0.0, +0.5,
+    -0.55f, -0.5,
+    -0.05f, +0.5,
+    -0.55f, +0.5
+};
+
+static const std::array<float, 12> position_data {
+    -0.5, -0.5,
+    +0.5, -0.5,
+    +0.0, +0.5,
+    -0.55f, -0.5,
+    -0.05f, +0.5,
+    -0.55f, +0.5
+};
+
+static const std::array<float, 18> color_data {
+    1.0, 0.0, 0.0,
+    0.0, 1.0, 0.0,
+    0.0, 0.0, 1.0,
+    1.0, 1.0, 0.0,
+    1.0, 0.0, 1.0,
+    0.0, 1.0, 1.0
+};
+
 inline static wgpu::Surface crateSurfacefromWindow(wgpu::Instance instance, const Window& window) {
-#if defined (SDL_PLATFORM_WIN32)
     auto display = window.getDisplay();
+    switch (display.type) {
+        case WindowDisplay::Type::HWND: {
+            wgpu::SurfaceDescriptorFromWindowsHWND from_windows_display;
+            from_windows_display.chain.sType = WGPUSType_SurfaceDescriptorFromWindowsHWND;
+            from_windows_display.chain.next = NULL;
+            from_windows_display.hinstance = display.hwnd.hinstance;
+            from_windows_display.hwnd = display.hwnd.hwnd;
+            
+            wgpu::SurfaceDescriptor surface_descriptor;
+            surface_descriptor.nextInChain = &from_windows_display.chain;
+            surface_descriptor.label = nullptr;
+            return instance.createSurface(surface_descriptor);
+        }
+        case WindowDisplay::Type::X11: {
+            wgpu::SurfaceDescriptorFromXlibWindow from_windows_display;
+            from_windows_display.chain.sType = wgpu::SType::SurfaceDescriptorFromXlibWindow;
+            from_windows_display.chain.next = NULL;
+            from_windows_display.display = display.x11.display;
+            from_windows_display.window = display.x11.window;
 
-    wgpu::SurfaceDescriptorFromWindowsHWND from_windows_display;
-    from_windows_display.chain.sType = WGPUSType_SurfaceDescriptorFromWindowsHWND;
-    from_windows_display.chain.next = NULL;
-    from_windows_display.hinstance = display.hwnd.hinstance;
-    from_windows_display.hwnd = display.hwnd.hwnd;
-    wgpu::SurfaceDescriptor surface_descriptor;
-    surface_descriptor.nextInChain = &from_windows_display.chain;
-    surface_descriptor.label = nullptr;
-    return instance.createSurface(surface_descriptor);
+            wgpu::SurfaceDescriptor surface_descriptor;
+            surface_descriptor.nextInChain = &from_windows_display.chain;
+            surface_descriptor.label = nullptr;
+            return instance.createSurface(surface_descriptor);
+        }
+        case WindowDisplay::Type::Wayland: {
+            wgpu::SurfaceDescriptorFromWaylandSurface from_windows_display;
+            from_windows_display.chain.sType = wgpu::SType::SurfaceDescriptorFromWaylandSurface;
+            from_windows_display.chain.next = NULL;
+            from_windows_display.display = display.wayland.display;
+            from_windows_display.surface = display.wayland.surface;
 
-#elif defined (SDL_PLATFORM_LINUX)
-    auto display = window.getDisplay();
-    if(display.type == WindowDisplay::Type::X11) {
-        wgpu::SurfaceDescriptorFromXlibWindow from_windows_display;
-        from_windows_display.chain.sType = wgpu::SType::SurfaceDescriptorFromXlibWindow;
-        from_windows_display.chain.next = NULL;
-        from_windows_display.display = display.x11.display;
-        from_windows_display.window = display.x11.window;
-
-        wgpu::SurfaceDescriptor surface_descriptor;
-        surface_descriptor.nextInChain = &from_windows_display.chain;
-        surface_descriptor.label = nullptr;
-        return instance.createSurface(surface_descriptor);
-    } else if (display.type == WindowDisplay::Type::Wayland) {
-        wgpu::SurfaceDescriptorFromWaylandSurface from_windows_display;
-        from_windows_display.chain.sType = wgpu::SType::SurfaceDescriptorFromWaylandSurface;
-        from_windows_display.chain.next = NULL;
-        from_windows_display.display = display.wayland.display;
-        from_windows_display.surface = display.wayland.surface;
-
-        wgpu::SurfaceDescriptor surface_descriptor;
-        surface_descriptor.nextInChain = &from_windows_display.chain;
-        surface_descriptor.label = nullptr;
-        return instance.createSurface(surface_descriptor);
-    } else {
-        abort();
+            wgpu::SurfaceDescriptor surface_descriptor;
+            surface_descriptor.nextInChain = &from_windows_display.chain;
+            surface_descriptor.label = nullptr;
+            return instance.createSurface(surface_descriptor);
+        }
     }
-#endif
 }
 
 class Application {
@@ -63,6 +105,7 @@ public:
         m_instance = wgpu::createInstance(inst_desc);
         m_surface = crateSurfacefromWindow(m_instance, *m_window);
         wgpu::RequestAdapterOptions adapter_opts = {};
+        adapter_opts.powerPreference = wgpu::PowerPreference::HighPerformance;
         wgpu::Adapter adapter = m_instance.requestAdapter(adapter_opts);
         inspectAdapter(adapter);
         wgpu::DeviceDescriptor dev_desc = {};
@@ -107,6 +150,7 @@ public:
             std::cout << "Uncaptured device error: type " << type;
             if (message) std::cout << " (" << message << ")";
             std::cout << '\n';
+            abort();
         };
         m_device_err_callback_holder = m_device.setUncapturedErrorCallback(std::move(on_dev_error));
 
@@ -130,6 +174,8 @@ public:
         m_queue = m_device.getQueue();
 
         initializeRenderPipline();
+
+        initializeBuffer();
     }
 
     inline void mainLoop() {
@@ -160,6 +206,7 @@ public:
         wgpu::TextureView target_view = texture.createView(texture_view_desc);
 
         if(!target_view) {
+            m_need_close = true;
             return;
         }
 
@@ -179,7 +226,8 @@ public:
         render_pass_color_attachment.resolveTarget = nullptr;
         render_pass_color_attachment.loadOp = wgpu::LoadOp::Clear;
         render_pass_color_attachment.storeOp = wgpu::StoreOp::Store;
-        render_pass_color_attachment.clearValue = wgpu::Color{ 0xf3 / 255.0, 0x59 / 255.0, 0x7c / 255.0, 1.0 };
+        // render_pass_color_attachment.clearValue = wgpu::Color{ 0xf3 / 255.0, 0x59 / 255.0, 0x7c / 255.0, 1.0 };
+        render_pass_color_attachment.clearValue = wgpu::Color{ 0.15, 0.15, 0.15, 1.0 };
 #ifndef WEBGPU_BACKEND_WGPU
         render_pass_color_attachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 #endif // NOT WEBGPU_BACKEND_WGPU
@@ -192,7 +240,9 @@ public:
         wgpu::RenderPassEncoder render_pass_encoder = cmd_encoder.beginRenderPass(render_pass_desc);
 
         render_pass_encoder.setPipeline(m_render_pipeline);
-        render_pass_encoder.draw(3, 1, 0, 0);
+        render_pass_encoder.setVertexBuffer(0, m_position_buffer, 0, m_position_buffer.getSize());
+        render_pass_encoder.setVertexBuffer(1, m_color_buffer, 0, m_color_buffer.getSize());
+        render_pass_encoder.draw(position_data.size() / 2, 1, 0, 0);
         render_pass_encoder.end();
         render_pass_encoder.release();
 
@@ -229,11 +279,14 @@ public:
     }
 
     inline ~Application() {
-        m_instance.release();
-        m_device.release();
-        m_surface.release();
-        m_queue.release();
+        m_color_buffer.release();
+        m_position_buffer.release();
+        m_vertex_buffer.release();
         m_render_pipeline.release();
+        m_queue.release();
+        m_surface.release();
+        m_device.release();
+        m_instance.release();
     }
 
 private:
@@ -256,8 +309,28 @@ private:
 
         wgpu::RenderPipelineDescriptor render_pipline_desc = {};
 
-        render_pipline_desc.vertex.bufferCount = 0;
-        render_pipline_desc.vertex.buffers = nullptr;
+        wgpu::VertexBufferLayout vertex_buffer_layout[2] = {{}, {}};
+        wgpu::VertexAttribute vertex_attr[2] = {{}, {}};
+        vertex_attr[0].format = wgpu::VertexFormat::Float32x2;
+        vertex_attr[0].offset = 0;
+        vertex_attr[0].shaderLocation = 0;
+
+        vertex_buffer_layout[0].attributeCount = 1;
+        vertex_buffer_layout[0].attributes = vertex_attr;
+        vertex_buffer_layout[0].arrayStride = 2*sizeof(float);
+        vertex_buffer_layout[0].stepMode = wgpu::VertexStepMode::Vertex;
+        
+        vertex_attr[1].format = wgpu::VertexFormat::Float32x3;
+        vertex_attr[1].offset = 0;
+        vertex_attr[1].shaderLocation = 1;
+    
+        vertex_buffer_layout[1].attributeCount = 1;
+        vertex_buffer_layout[1].attributes = vertex_attr + 1;
+        vertex_buffer_layout[1].arrayStride = 3*sizeof(float);
+        vertex_buffer_layout[1].stepMode = wgpu::VertexStepMode::Vertex;
+
+        render_pipline_desc.vertex.bufferCount = 2;
+        render_pipline_desc.vertex.buffers = vertex_buffer_layout;
 
         render_pipline_desc.vertex.module = shader_module;
         render_pipline_desc.vertex.entryPoint = "vs_main";
@@ -305,6 +378,26 @@ private:
         shader_module.release();
     }
 
+    inline void initializeBuffer() {
+        wgpu::BufferDescriptor buffer_desc = {};
+        buffer_desc.size = sizeof(vertex_data);
+        buffer_desc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex;
+        buffer_desc.mappedAtCreation = false;
+        buffer_desc.label = "Vertex";
+        m_vertex_buffer = m_device.createBuffer(buffer_desc);
+        m_queue.writeBuffer(m_vertex_buffer, 0, vertex_data.data(), buffer_desc.size);
+
+        buffer_desc.size = sizeof(position_data);
+        m_position_buffer = m_device.createBuffer(buffer_desc);
+        buffer_desc.label = "Vertex Position";
+        m_queue.writeBuffer(m_position_buffer, 0, position_data.data(), buffer_desc.size);
+
+        buffer_desc.size = sizeof(color_data);
+        m_color_buffer = m_device.createBuffer(buffer_desc);
+        buffer_desc.label = "Vertex Color";
+        m_queue.writeBuffer(m_color_buffer, 0, color_data.data(), buffer_desc.size);
+    }
+
 private:
     std::unique_ptr<Window> m_window { nullptr };
     std::unique_ptr<wgpu::ErrorCallback> m_device_err_callback_holder { nullptr };
@@ -314,5 +407,8 @@ private:
     wgpu::Queue m_queue { nullptr };
     wgpu::RenderPipeline m_render_pipeline { nullptr };
     wgpu::TextureFormat m_surface_format { wgpu::TextureFormat::Undefined };
+    wgpu::Buffer m_vertex_buffer { nullptr };
+    wgpu::Buffer m_position_buffer { nullptr };
+    wgpu::Buffer m_color_buffer { nullptr };
     bool m_need_close { false };
 };

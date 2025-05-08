@@ -16,6 +16,7 @@ file(GLOB_RECURSE HEADER "${PROJECT_SOURCE_DIR}/include/*.h")
 
 if(${RENDERER_LINK_SHARED})
     message("-- ${PROJECT_NAME}: making shared lib")
+    message(FATAL_ERROR "-- ${PROJECT_NAME}: cannot make shared lib")
     add_library(renderer SHARED ${SOURCE} ${HEADER})
     target_compile_definitions(renderer PRIVATE ${PROJECT_NAME}_LINK_SHARED)
     if(WIN32)

@@ -1,3 +1,18 @@
+/*
+    renderer.cpp
+    Copyright (C) 2025 zlc-dev
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+*/
+
 #include "renderer.h"
 #include <iostream>
 #include <webgpu/webgpu.hpp>
@@ -18,6 +33,7 @@ void inspectAdapter(wgpu::Adapter adapter) {
         std::cout << " - maxTextureDimension2D: " << supported_limits.limits.maxTextureDimension2D << '\n';
         std::cout << " - maxTextureDimension3D: " << supported_limits.limits.maxTextureDimension3D << '\n';
         std::cout << " - maxTextureArrayLayers: " << supported_limits.limits.maxTextureArrayLayers << '\n';
+        std::cout << " - maxVertexAttributes:   " << supported_limits.limits.maxVertexAttributes   << '\n'; 
     }
     wgpu::AdapterProperties properties = {};
     properties.nextInChain = nullptr;
@@ -80,6 +96,8 @@ void inspectDevice(wgpu::Device device) {
         std::cout << " - maxTextureDimension2D: " << limits.limits.maxTextureDimension2D << '\n';
         std::cout << " - maxTextureDimension3D: " << limits.limits.maxTextureDimension3D << '\n';
         std::cout << " - maxTextureArrayLayers: " << limits.limits.maxTextureArrayLayers << '\n';
+        std::cout << " - maxVertexAttributes:   " << limits.limits.maxVertexAttributes   << '\n'; 
+        std::cout << " - maxVertexBuffers:      " << limits.limits.maxVertexBuffers      << '\n'; 
     }
 }
 
