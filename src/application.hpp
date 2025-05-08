@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "model_loader.hpp"
 #include "renderer.h"
 #include "webgpu/webgpu.hpp"
 #include "window.hpp"
@@ -24,6 +25,9 @@
 #include <stdlib.h>
 
 extern "C" const char _binary_assets_wgsl_test_wgsl_start[];
+
+extern "C" const char _binary_assets_model_monkey_head_obj_start[];
+extern "C" const char _binary_assets_model_monkey_head_obj_end[];
 
 static const std::array<float, 12> vertex_data = {
     -0.5, -0.5,
@@ -240,9 +244,9 @@ public:
         wgpu::RenderPassEncoder render_pass_encoder = cmd_encoder.beginRenderPass(render_pass_desc);
 
         render_pass_encoder.setPipeline(m_render_pipeline);
-        render_pass_encoder.setVertexBuffer(0, m_position_buffer, 0, m_position_buffer.getSize());
-        render_pass_encoder.setVertexBuffer(1, m_color_buffer, 0, m_color_buffer.getSize());
-        render_pass_encoder.draw(position_data.size() / 2, 1, 0, 0);
+        render_pass_encoder.setVertexBuffer(0, m_model_vertices_buffer, 0, m_model_vertices_buffer.getSize());
+        render_pass_encoder.setIndexBuffer(m_model_indices_buffer, wgpu::IndexFormat::Uint32, 0, m_model_indices_buffer.getSize());
+        render_pass_encoder.drawIndexed(m_index_count, 1, 0, 0, 0);
         render_pass_encoder.end();
         render_pass_encoder.release();
 
@@ -279,9 +283,8 @@ public:
     }
 
     inline ~Application() {
-        m_color_buffer.release();
-        m_position_buffer.release();
-        m_vertex_buffer.release();
+        m_model_vertices_buffer.release();
+        m_model_indices_buffer.release();
         m_render_pipeline.release();
         m_queue.release();
         m_surface.release();
@@ -309,27 +312,18 @@ private:
 
         wgpu::RenderPipelineDescriptor render_pipline_desc = {};
 
-        wgpu::VertexBufferLayout vertex_buffer_layout[2] = {{}, {}};
-        wgpu::VertexAttribute vertex_attr[2] = {{}, {}};
-        vertex_attr[0].format = wgpu::VertexFormat::Float32x2;
+        wgpu::VertexBufferLayout vertex_buffer_layout[1] = {{}};
+        wgpu::VertexAttribute vertex_attr[1] = {{}};
+        vertex_attr[0].format = wgpu::VertexFormat::Float32x3;
         vertex_attr[0].offset = 0;
         vertex_attr[0].shaderLocation = 0;
 
         vertex_buffer_layout[0].attributeCount = 1;
         vertex_buffer_layout[0].attributes = vertex_attr;
-        vertex_buffer_layout[0].arrayStride = 2*sizeof(float);
+        vertex_buffer_layout[0].arrayStride = 3*sizeof(float);
         vertex_buffer_layout[0].stepMode = wgpu::VertexStepMode::Vertex;
-        
-        vertex_attr[1].format = wgpu::VertexFormat::Float32x3;
-        vertex_attr[1].offset = 0;
-        vertex_attr[1].shaderLocation = 1;
-    
-        vertex_buffer_layout[1].attributeCount = 1;
-        vertex_buffer_layout[1].attributes = vertex_attr + 1;
-        vertex_buffer_layout[1].arrayStride = 3*sizeof(float);
-        vertex_buffer_layout[1].stepMode = wgpu::VertexStepMode::Vertex;
 
-        render_pipline_desc.vertex.bufferCount = 2;
+        render_pipline_desc.vertex.bufferCount = 1;
         render_pipline_desc.vertex.buffers = vertex_buffer_layout;
 
         render_pipline_desc.vertex.module = shader_module;
@@ -379,23 +373,29 @@ private:
     }
 
     inline void initializeBuffer() {
+        Model model;
+        model.loadModelFromMemory(
+            (const void *)_binary_assets_model_monkey_head_obj_start, 
+            _binary_assets_model_monkey_head_obj_end - _binary_assets_model_monkey_head_obj_start
+        );
+
         wgpu::BufferDescriptor buffer_desc = {};
         buffer_desc.size = sizeof(vertex_data);
         buffer_desc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex;
         buffer_desc.mappedAtCreation = false;
-        buffer_desc.label = "Vertex";
-        m_vertex_buffer = m_device.createBuffer(buffer_desc);
-        m_queue.writeBuffer(m_vertex_buffer, 0, vertex_data.data(), buffer_desc.size);
 
-        buffer_desc.size = sizeof(position_data);
-        m_position_buffer = m_device.createBuffer(buffer_desc);
-        buffer_desc.label = "Vertex Position";
-        m_queue.writeBuffer(m_position_buffer, 0, position_data.data(), buffer_desc.size);
+        buffer_desc.size = model.m_vertices.size() * sizeof(model.m_vertices[0]);
+        buffer_desc.label = "Model vertices";
+        m_model_vertices_buffer = m_device.createBuffer(buffer_desc);
+        m_queue.writeBuffer(m_model_vertices_buffer, 0, model.m_vertices.data(), buffer_desc.size);
 
-        buffer_desc.size = sizeof(color_data);
-        m_color_buffer = m_device.createBuffer(buffer_desc);
-        buffer_desc.label = "Vertex Color";
-        m_queue.writeBuffer(m_color_buffer, 0, color_data.data(), buffer_desc.size);
+        buffer_desc.size = model.m_indices.size() * sizeof(model.m_indices[0]);
+        buffer_desc.label = "Model indices";
+        buffer_desc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index;
+        m_model_indices_buffer = m_device.createBuffer(buffer_desc);
+        m_queue.writeBuffer(m_model_indices_buffer, 0, model.m_indices.data(), buffer_desc.size);
+
+        m_index_count = model.m_indices.size();
     }
 
 private:
@@ -407,8 +407,8 @@ private:
     wgpu::Queue m_queue { nullptr };
     wgpu::RenderPipeline m_render_pipeline { nullptr };
     wgpu::TextureFormat m_surface_format { wgpu::TextureFormat::Undefined };
-    wgpu::Buffer m_vertex_buffer { nullptr };
-    wgpu::Buffer m_position_buffer { nullptr };
-    wgpu::Buffer m_color_buffer { nullptr };
+    wgpu::Buffer m_model_vertices_buffer { nullptr };
+    wgpu::Buffer m_model_indices_buffer { nullptr };
+    unsigned m_index_count = 0;
     bool m_need_close { false };
 };

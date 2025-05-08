@@ -10,8 +10,13 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebug")
 file(GLOB_RECURSE SOURCE "${PROJECT_SOURCE_DIR}/src/*.cpp" "${PROJECT_SOURCE_DIR}/src/*.cc")
 
 include(cmake/utils.cmake)
+include(FetchContent)
 
-list(APPEND BIN_FILES "${CMAKE_SOURCE_DIR}/assets/wgsl/test.wgsl")
+list(APPEND BIN_FILES 
+    "${CMAKE_SOURCE_DIR}/assets/wgsl/test.wgsl" 
+    "${CMAKE_SOURCE_DIR}/assets/model/monkey_head.mtl" 
+    "${CMAKE_SOURCE_DIR}/assets/model/monkey_head.obj"
+)
 
 foreach(BIN_FILE ${BIN_FILES})
     file(RELATIVE_PATH REL_PATH ${CMAKE_SOURCE_DIR} ${BIN_FILE})
@@ -31,6 +36,26 @@ set_target_properties(nocturne PROPERTIES
     COMPILE_WARNING_AS_ERROR ON
 )
 
+FetchContent_Declare(
+    assimp
+    GIT_REPOSITORY  "https://github.com/assimp/assimp.git"
+    GIT_TAG         "v5.4.3"
+)
+set(ASSIMP_BUILD_TESTS OFF)
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF)
+
+if(NOT MAVC)
+    list(APPEND CMAKE_CXX_FLAGS "-Wno-nontrivial-memcall")
+    list(APPEND CMAKE_C_FLAGS "-Wno-nontrivial-memcall")
+endif()
+
+FetchContent_MakeAvailable(assimp)
+
+if(NOT MAVC)
+    list(REMOVE_ITEM CMAKE_CXX_FLAGS "-Wno-nontrivial-memcall")
+    list(REMOVE_ITEM CMAKE_C_FLAGS "-Wno-nontrivial-memcall")
+endif()
+
 set(WEBGPU_BACKEND "DAWN")
 set(WINDOW_LINK_SHARED OFF)
 set(RENDERER_LINK_SHARED OFF)
@@ -40,7 +65,7 @@ target_compile_options(nocturne PRIVATE -fexceptions)
 add_subdirectory("${PROJECT_SOURCE_DIR}/window/")
 add_subdirectory("${PROJECT_SOURCE_DIR}/renderer/")
 
-target_link_libraries(nocturne PRIVATE webgpu renderer window)
+target_link_libraries(nocturne PRIVATE webgpu assimp renderer window)
 
 # copy binaries
 target_copy_renderer_binaries(nocturne)

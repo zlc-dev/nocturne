@@ -10,14 +10,11 @@ struct VertexOut {
 
 
 @vertex
-fn vs_main(in: VertexIn) -> VertexOut {
-    var out: VertexOut; // create the output struct
-    out.position = vec4f(in.position, 0.0, 1.0); // same as what we used to directly return
-    out.color = in.color; // forward the color attribute to the fragment shader
-    return out;
+fn vs_main(@location(0) position: vec3f) -> @builtin(position) vec4f {
+    return vec4f(position, 1.0);
 }
 
 @fragment
-fn fs_main(in: VertexOut) -> @location(0) vec4f {
-    return vec4f(in.color, 1.0); // use the interpolated color coming from the vertex shader
+fn fs_main() -> @location(0) vec4f {
+    return vec4f(0.0, 0.4, 0.8, 1.0);
 }

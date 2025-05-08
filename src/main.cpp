@@ -20,7 +20,6 @@
 using namespace std::string_literals;
 
 int main(int argc, char* const argv[]) {
-
     auto window_sys = WindowSystemFactory::create(WindowType::SDL3)
         .expect("cannot create window system");
     WindowConfig config {

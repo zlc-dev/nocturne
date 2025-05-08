@@ -4,6 +4,6 @@ install/
 CMakeFiles/
 .clangd
 CMakeUserPresets.json
-.vscode/
+.vscode/*.json
 *.o
 *.lib
